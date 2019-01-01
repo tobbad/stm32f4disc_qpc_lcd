@@ -1,3 +1,6 @@
 [submodule "qpc"]
 	path = qpc
 	url = git@github.com:QuantumLeaps/qpc.git
+[submodule "emLib"]
+	path = emLib
+	url = git@github.com:tobbad/emLib.git
