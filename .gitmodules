@@ -4,3 +4,6 @@
 [submodule "emLib"]
 	path = emLib
 	url = git@github.com:tobbad/emLib.git
+[submodule "Middlewares/qpc"]
+	path = Middlewares/qpc
+	url = git@github.com:tobbad/emLib.git
