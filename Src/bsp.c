@@ -31,18 +31,20 @@
 * https://state-machine.com
 * mailto:info@state-machine.com
 *****************************************************************************/
+#include <stdbool.h>
+#include "main.h"
 #include "qpc.h"
-#include "dpp.h"
 #include "bsp.h"
 
+#include "../state_machine/AppSM.h"
 #include "stm32f4xx.h"  /* CMSIS-compliant header file for the MCU used */
-#include "stm32f4xx_exti.h"
-#include "stm32f4xx_gpio.h"
-#include "stm32f4xx_rcc.h"
-#include "stm32f4xx_usart.h"
+#include "stm32f4xx_ll_gpio.h"
+#include "stm32f4xx_hal_rcc.h"
+#include "stm32f4xx_ll_usart.h"
 /* add other drivers if necessary... */
 
 Q_DEFINE_THIS_FILE
+
 
 /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! CAUTION !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 * Assign a priority to EVERY ISR explicitly by calling NVIC_SetPriority().
@@ -69,19 +71,41 @@ void SysTick_Handler(void);
 void USART2_IRQHandler(void);
 
 /* Local-scope defines -----------------------------------------------------*/
-#define LED_GPIO_PORT     GPIOD
-#define LED_GPIO_CLK      RCC_AHB1Periph_GPIOD
 
-#define LED4_PIN          GPIO_Pin_12
-#define LED3_PIN          GPIO_Pin_13
-#define LED5_PIN          GPIO_Pin_14
-#define LED6_PIN          GPIO_Pin_15
+/* Buttons debounce structure */
+typedef struct btn_deb_t_
+{
+	GPIO_TypeDef *GPIOx;
+	uint32_t PinMask;
+	bool depressed;
+	bool previous;
+	const QSignal signal_on;
+	const QSignal signal_off;
+} btn_deb_t;
 
-#define BTN_GPIO_PORT     GPIOA
-#define BTN_GPIO_CLK      RCC_AHB1Periph_GPIOA
-#define BTN_B1            GPIO_Pin_0
+typedef enum {
+	BTNSH_UP = 0,
+	BTNSH_DOWN,
+	BTNSH_LEFT,
+	BTNSH_RIGHT,
+	BTNSH_CNT,
+} btnsh_e;
 
-static uint32_t l_rnd;    /* random seed */
+static const QEvt btn_evt[][2]=
+{
+	{{Btnsh_up_on   ,  0, 0}, {Btnsh_up_off  ,  0, 0}},
+	{{Btnsh_down_on ,  0, 0}, {Btnsh_down_off,  0, 0}},
+	{{Btnsh_left_on ,  0, 0}, {Btnsh_left_off,  0, 0}},
+	{{Btnsh_right_on,  0, 0}, {Btnsh_right_off, 0, 0}},
+};
+
+static btn_deb_t btnsh[BTNSH_CNT]=
+{
+	{BTNSH_Up_GPIO_Port, BTNSH_Up_Pin, false, false      , BTNSH_UP   },
+	{BTNSH_Down_GPIO_Port, BTNSH_Down_Pin, false, false  , BTNSH_DOWN },
+	{BTNSH_Left_GPIO_Port, BTNSH_Left_Pin, false, false  , BTNSH_LEFT },
+	{BTNSH_Right_GPIO_Port, BTNSH_Right_Pin, false, false, BTNSH_RIGHT},
+};
 
 #ifdef Q_SPY
     static QSTimeCtr QS_tickTime_;
@@ -91,27 +115,23 @@ static uint32_t l_rnd;    /* random seed */
     static uint8_t const l_SysTick;
 
     enum AppRecords { /* application-specific trace records */
-        PHILO_STAT = QS_USER,
-        COMMAND_STAT
+    	Btnsh_up = QS_USER,
+		Btnsh_down,
+		Btnsh_left,
+		Btnsh_right,
+		COMMAND_STAT,
     };
 
 #endif
 
 /* ISRs used in this project ===============================================*/
 void SysTick_Handler(void) {
-    /* state of the button debouncing, see below */
-    static struct ButtonsDebouncing {
-        uint32_t depressed;
-        uint32_t previous;
-    } buttons = { 0U, 0U };
-    uint32_t current;
-    uint32_t tmp;
 
     QK_ISR_ENTRY();   /* inform QK about entering an ISR */
 
 #ifdef Q_SPY
     {
-        tmp = SysTick->CTRL; /* clear SysTick_CTRL_COUNTFLAG */
+    	uint32_t tmp = SysTick->CTRL; /* clear SysTick_CTRL_COUNTFLAG */
         QS_tickTime_ += QS_tickPeriod_; /* account for the clock rollover */
     }
 #endif
@@ -122,23 +142,27 @@ void SysTick_Handler(void) {
     * adapted from the book "Embedded Systems Dictionary" by Jack Ganssle
     * and Michael Barr, page 71.
     */
-    current = BTN_GPIO_PORT->IDR; /* read BTN GPIO */
-    tmp = buttons.depressed; /* save the debounced depressed buttons */
-    buttons.depressed |= (buttons.previous & current); /* set depressed */
-    buttons.depressed &= (buttons.previous | current); /* clear released */
-    buttons.previous   = current; /* update the history */
-    tmp ^= buttons.depressed;     /* changed debounced depressed */
-    if ((tmp & BTN_B1) != 0U) {  /* debounced B1 state changed? */
-        if ((buttons.depressed & BTN_B1) != 0U) { /* is B1 depressed? */
-            static QEvt const pauseEvt = { PAUSE_SIG, 0U, 0U};
-            QF_PUBLISH(&pauseEvt, &l_SysTick);
-        }
-        else { /* the button is released */
-            static QEvt const serveEvt = { SERVE_SIG, 0U, 0U};
-            QF_PUBLISH(&serveEvt, &l_SysTick);
-        }
+#if 0
+    for (uint8_t btn_idx=0; btn_idx<BTNSH_CNT;btn_idx++)
+    {
+        bool current;
+        bool tmp;
+		current = LL_GPIO_IsInputPinSet(btnsh[btn_idx].GPIOx, btnsh[btn_idx].PinMask); /* read Button */
+		tmp = btnsh[btn_idx].depressed; /* save the debounced depressed buttons */
+		btnsh[btn_idx].depressed |= (btnsh[btn_idx].previous & current); /* set depressed */
+		btnsh[btn_idx].depressed &= (btnsh[btn_idx].previous | current); /* clear released */
+		btnsh[btn_idx].previous   = current; /* update the history */
+		tmp ^= btnsh[btn_idx].depressed;     /* changed debounced depressed */
+		if (tmp  != false) {  /* debounced B1 state changed? */
+			if (btnsh[btn_idx].depressed ) { /* is B1 depressed? */
+				QF_PUBLISH(&btn_evt[btn_idx][0], &l_SysTick);
+			}
+			else { /* the button is released */
+				QF_PUBLISH(&btn_evt[btn_idx][1], &l_SysTick);
+			}
+		}
     }
-
+#endif
     QK_ISR_EXIT();  /* inform QK about exiting an ISR */
 }
 
@@ -151,49 +175,19 @@ void SysTick_Handler(void) {
 * QK_ISR_EXIT and they cannot post or publish events.
 */
 void USART2_IRQHandler(void) {
-    if ((USART2->SR & USART_SR_RXNE) != 0) {
-        uint32_t b = USART2->DR;
+    if (LL_USART_IsActiveFlag_RXNE(USART2)) {
+        uint32_t b = LL_USART_ReceiveData8(USART2);
         QS_RX_PUT(b);
     }
 }
 #else
-void USART2_IRQHandler(void) {}
+void USART2_IRQHandler(void) {
+}
 #endif
 
 
 /* BSP functions ===========================================================*/
 void BSP_init(void) {
-    /* NOTE: SystemInit() already called from the startup code
-    *  but SystemCoreClock needs to be updated
-    */
-    SystemCoreClockUpdate();
-
-    /* configure the FPU usage by choosing one of the options... */
-#if 1
-    /* OPTION 1:
-    * Use the automatic FPU state preservation and the FPU lazy stacking.
-    *
-    * NOTE:
-    * Use the following setting when FPU is used in more than one task or
-    * in any ISRs. This setting is the safest and recommended, but requires
-    * extra stack space and CPU cycles.
-    */
-    FPU->FPCCR |= (1U << FPU_FPCCR_ASPEN_Pos) | (1U << FPU_FPCCR_LSPEN_Pos);
-#else
-    /* OPTION 2:
-    * Do NOT to use the automatic FPU state preservation and
-    * do NOT to use the FPU lazy stacking.
-    *
-    * NOTE:
-    * Use the following setting when FPU is used in ONE task only and not
-    * in any ISR. This setting is very efficient, but if more than one task
-    * (or ISR) start using the FPU, this can lead to corruption of the
-    * FPU registers. This option should be used with CAUTION.
-    */
-    FPU->FPCCR &= ~((1U << FPU_FPCCR_ASPEN_Pos) | (1U << FPU_FPCCR_LSPEN_Pos));
-#endif
-
-    GPIO_InitTypeDef GPIO_struct;
 
     /* NOTE: SystemInit() already called from the startup code
     *  but SystemCoreClock needs to be updated
@@ -205,60 +199,35 @@ void BSP_init(void) {
     */
     FPU->FPCCR &= ~((1U << FPU_FPCCR_ASPEN_Pos) | (1U << FPU_FPCCR_LSPEN_Pos));
 
-    /* Initialize thr port for the LEDs */
-    RCC_AHB1PeriphClockCmd(LED_GPIO_CLK , ENABLE);
-
-    /* GPIO Configuration for the LEDs... */
-    GPIO_struct.GPIO_Mode  = GPIO_Mode_OUT;
-    GPIO_struct.GPIO_OType = GPIO_OType_PP;
-    GPIO_struct.GPIO_PuPd  = GPIO_PuPd_UP;
-    GPIO_struct.GPIO_Speed = GPIO_Speed_50MHz;
-
-    GPIO_struct.GPIO_Pin = LED3_PIN;
-    GPIO_Init(LED_GPIO_PORT, &GPIO_struct);
-    LED_GPIO_PORT->BSRRH = LED3_PIN; /* turn LED off */
-
-    GPIO_struct.GPIO_Pin = LED4_PIN;
-    GPIO_Init(LED_GPIO_PORT, &GPIO_struct);
-    LED_GPIO_PORT->BSRRH = LED4_PIN; /* turn LED off */
-
-    GPIO_struct.GPIO_Pin = LED5_PIN;
-    GPIO_Init(LED_GPIO_PORT, &GPIO_struct);
-    LED_GPIO_PORT->BSRRH = LED5_PIN; /* turn LED off */
-
-    GPIO_struct.GPIO_Pin = LED6_PIN;
-    GPIO_Init(LED_GPIO_PORT, &GPIO_struct);
-    LED_GPIO_PORT->BSRRH = LED6_PIN; /* turn LED off */
-
-    /* Initialize thr port for Button */
-    RCC_AHB1PeriphClockCmd(BTN_GPIO_CLK , ENABLE);
-
-    /* GPIO Configuration for the Button... */
-    GPIO_struct.GPIO_Pin   = BTN_B1;
-    GPIO_struct.GPIO_Mode  = GPIO_Mode_IN;
-    GPIO_struct.GPIO_OType = GPIO_OType_PP;
-    GPIO_struct.GPIO_PuPd  = GPIO_PuPd_DOWN;
-    GPIO_struct.GPIO_Speed = GPIO_Speed_50MHz;
-    GPIO_Init(BTN_GPIO_PORT, &GPIO_struct);
-
-    /* seed the random number generator */
-    BSP_randomSeed(1234U);
 
     if (QS_INIT((void *)0) == 0U) { /* initialize the QS software tracing */
         Q_ERROR();
     }
     QS_OBJ_DICTIONARY(&l_SysTick);
-    QS_USR_DICTIONARY(PHILO_STAT);
-    QS_USR_DICTIONARY(COMMAND_STAT);
+    //QS_USR_DICTIONARY(PHILO_STAT);
+    //QS_USR_DICTIONARY(COMMAND_STAT);
 }
 /*..........................................................................*/
-void BSP_ledOn(void) {
-    LED_GPIO_PORT->BSRRL = LED6_PIN;
+void BSP_ledOn(Ledsh_t ledNr) {
+	if (ledNr==LEDSH_RED)
+	{
+		LL_GPIO_SetOutputPin(GPIOC, LDSH_Red_Pin);
+	} else if (ledNr==LEDSH_GREEN)
+	{
+		LL_GPIO_SetOutputPin(GPIOC, LDSH_Green_Pin);
+	}
 }
 /*..........................................................................*/
-void BSP_ledOff(void) {
-    LED_GPIO_PORT->BSRRH = LED6_PIN;
+void BSP_ledOff(Ledsh_t ledNr) {
+	if (ledNr==LEDSH_RED)
+	{
+		LL_GPIO_ResetOutputPin(GPIOC, LDSH_Red_Pin);
+	} else if (ledNr==LEDSH_GREEN)
+	{
+		LL_GPIO_ResetOutputPin(GPIOC, LDSH_Green_Pin);
+	}
 }
+#if 0 //Not used
 /*..........................................................................*/
 void BSP_displayPhilStat(uint8_t n, char const *stat) {
     (void)n;
@@ -290,29 +259,7 @@ void BSP_displayPaused(uint8_t paused) {
         LED_GPIO_PORT->BSRRH = LED4_PIN; /* turn LED on  */
     }
 }
-/*..........................................................................*/
-uint32_t BSP_random(void) { /* a very cheap pseudo-random-number generator */
-    uint32_t rnd;
-    QSchedStatus lockStat;
-
-    /* Some flating point code is to exercise the VFP... */
-    float volatile x = 3.1415926F;
-    x = x + 2.7182818F;
-
-    lockStat = QK_schedLock(N_PHILO); /* lock scheduler up to N_PHILO prio */
-    /* "Super-Duper" Linear Congruential Generator (LCG)
-    * LCG(2^32, 3*7*11*13*23, 0, seed)
-    */
-    rnd = l_rnd * (3U*7U*11U*13U*23U);
-    l_rnd = rnd; /* set for the next time */
-    QK_schedUnlock(lockStat); /* unlock the scheduler */
-
-    return (rnd >> 8);
-}
-/*..........................................................................*/
-void BSP_randomSeed(uint32_t seed) {
-    l_rnd = seed;
-}
+#endif
 /*..........................................................................*/
 void BSP_terminate(int16_t result) {
     (void)result;
@@ -347,18 +294,18 @@ void QF_onCleanup(void) {
 /*..........................................................................*/
 void QK_onIdle(void) {
     QF_INT_DISABLE();
-    LED_GPIO_PORT->BSRRL = LED6_PIN; /* turn LED on  */
+    BSP_ledOn(LEDSH_RED); /* turn LED on  */
     __NOP(); /* wait a little to actually see the LED glow */
     __NOP();
     __NOP();
     __NOP();
-    LED_GPIO_PORT->BSRRH = LED6_PIN; /* turn LED off */
+    BSP_ledOff(LEDSH_RED); /* turn LED Off  */
     QF_INT_ENABLE();
 
 #ifdef Q_SPY
     QS_rxParse();  /* parse all the received bytes */
 
-    if ((USART2->SR & USART_FLAG_TXE) != 0) { /* TXE empty? */
+    if (LL_USART_IsActiveFlag_TXE(USART2)) { /* TXE empty? */
         uint16_t b;
 
         QF_INT_DISABLE();
@@ -366,7 +313,7 @@ void QK_onIdle(void) {
         QF_INT_ENABLE();
 
         if (b != QS_EOD) {  /* not End-Of-Data? */
-            USART2->DR  = (b & 0xFFU);  /* put into the DR register */
+        	LL_USART_TransmitData8(USART2, b & 0xFFU);  /* send byte */
         }
     }
 #elif defined NDEBUG
@@ -405,41 +352,12 @@ void Q_onAssert(char const *module, int loc) {
 uint8_t QS_onStartup(void const *arg) {
     static uint8_t qsBuf[2*1024]; /* buffer for QS-TX channel */
     static uint8_t qsRxBuf[100];  /* buffer for QS-RX channel */
-    GPIO_InitTypeDef GPIO_struct;
-    USART_InitTypeDef USART_struct;
 
     (void)arg; /* avoid the "unused parameter" compiler warning */
     QS_initBuf(qsBuf, sizeof(qsBuf));
     QS_rxInitBuf(qsRxBuf, sizeof(qsRxBuf));
 
-    /* enable peripheral clock for USART2 */
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);
-
-    /* GPIOA clock enable */
-    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
-
-    /* GPIOA Configuration:  USART2 TX on PA2 and RX on PA3 */
-    GPIO_struct.GPIO_Pin = GPIO_Pin_2 | GPIO_Pin_3;
-    GPIO_struct.GPIO_Mode = GPIO_Mode_AF;
-    GPIO_struct.GPIO_Speed = GPIO_Speed_50MHz;
-    GPIO_struct.GPIO_OType = GPIO_OType_PP;
-    GPIO_struct.GPIO_PuPd = GPIO_PuPd_UP ;
-    GPIO_Init(GPIOA, &GPIO_struct);
-
-    /* Connect USART2 pins to AF2 */
-    GPIO_PinAFConfig(GPIOA, GPIO_PinSource2, GPIO_AF_USART2); /* TX = PA2 */
-    GPIO_PinAFConfig(GPIOA, GPIO_PinSource3, GPIO_AF_USART2); /* RX = PA3 */
-
-    USART_struct.USART_BaudRate = 115200;
-    USART_struct.USART_WordLength = USART_WordLength_8b;
-    USART_struct.USART_StopBits = USART_StopBits_1;
-    USART_struct.USART_Parity = USART_Parity_No;
-    USART_struct.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
-    USART_struct.USART_Mode = USART_Mode_Tx | USART_Mode_Rx;
-    USART_Init(USART2, &USART_struct);
-
-    USART_ITConfig(USART2, USART_IT_RXNE, ENABLE); /* enable RX interrupt */
-    USART_Cmd(USART2, ENABLE); /* enable USART2 */
+    LL_USART_EnableIT_RXNE(USART2);
 
     QS_tickPeriod_ = SystemCoreClock / BSP_TICKS_PER_SEC;
     QS_tickTime_ = QS_tickPeriod_; /* to start the timestamp at zero */
@@ -470,9 +388,9 @@ void QS_onFlush(void) {
     QF_INT_DISABLE();
     while ((b = QS_getByte()) != QS_EOD) { /* while not End-Of-Data... */
         QF_INT_ENABLE();
-        while ((USART2->SR & USART_FLAG_TXE) == 0) { /* while TXE not empty */
+        while (!LL_USART_IsActiveFlag_TXE(USART2)) { /* while TXE not empty */
         }
-        USART2->DR = (b & 0xFFU); /* put into the DR register */
+        LL_USART_TransmitData8(USART2, b & 0xFFU);
         QF_INT_DISABLE();
     }
     QF_INT_ENABLE();
@@ -487,7 +405,7 @@ void QS_onReset(void) {
 void QS_onCommand(uint8_t cmdId,
                   uint32_t param1, uint32_t param2, uint32_t param3)
 {
-    void assert_failed(char const *module, int loc);
+    void assert_failed(uint8_t *module, uint32_t loc);
     (void)cmdId;
     (void)param1;
     (void)param2;

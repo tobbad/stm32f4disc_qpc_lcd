@@ -34,20 +34,23 @@
 #ifndef bsp_h
 #define bsp_h
 
-#define BSP_TICKS_PER_SEC    100U
+#define BSP_TICKS_PER_SEC    1000U
+
+typedef enum {
+	LEDSH_RED=0,
+	LEDSH_GREEN=1
+} Ledsh_t;
+
 
 void BSP_init(void);
-void BSP_displayPaused(uint8_t paused);
-void BSP_displayPhilStat(uint8_t n, char_t const *stat);
+//void BSP_displayPaused(uint8_t paused);
+void BSP_displayStat(uint8_t n, char_t const *stat);
 void BSP_terminate(int16_t result);
-
-void BSP_randomSeed(uint32_t seed);   /* random seed */
-uint32_t BSP_random(void);            /* pseudo-random generator */
 
 /* for testing... */
 void BSP_wait4PB1(void);
-void BSP_ledOn(void);
-void BSP_ledOff(void);
+void BSP_ledOn(Ledsh_t ledNr);
+void BSP_ledOff(Ledsh_t ledNr);
 
 extern QActive *the_Ticker0;
 
