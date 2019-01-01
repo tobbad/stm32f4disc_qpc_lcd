@@ -77,10 +77,8 @@ typedef struct btn_deb_t_
 {
 	GPIO_TypeDef *GPIOx;
 	uint32_t PinMask;
-	bool depressed;
-	bool previous;
-	const QSignal signal_on;
-	const QSignal signal_off;
+	uint8_t depressed;
+	uint8_t previous;
 } btn_deb_t;
 
 typedef enum {
@@ -101,10 +99,10 @@ static const QEvt btn_evt[][2]=
 
 static btn_deb_t btnsh[BTNSH_CNT]=
 {
-	{BTNSH_Up_GPIO_Port, BTNSH_Up_Pin, false, false      , BTNSH_UP   },
-	{BTNSH_Down_GPIO_Port, BTNSH_Down_Pin, false, false  , BTNSH_DOWN },
-	{BTNSH_Left_GPIO_Port, BTNSH_Left_Pin, false, false  , BTNSH_LEFT },
-	{BTNSH_Right_GPIO_Port, BTNSH_Right_Pin, false, false, BTNSH_RIGHT},
+	{BTNSH_Up_GPIO_Port, BTNSH_Up_Pin, 0, 0      },
+	{BTNSH_Down_GPIO_Port, BTNSH_Down_Pin, 0, 0  },
+	{BTNSH_Left_GPIO_Port, BTNSH_Left_Pin, 0, 0  },
+	{BTNSH_Right_GPIO_Port, BTNSH_Right_Pin, 0, 0},
 };
 
 #ifdef Q_SPY
@@ -142,27 +140,24 @@ void SysTick_Handler(void) {
     * adapted from the book "Embedded Systems Dictionary" by Jack Ganssle
     * and Michael Barr, page 71.
     */
-#if 0
-    for (uint8_t btn_idx=0; btn_idx<BTNSH_CNT;btn_idx++)
+    //for (uint8_t btn_idx=0; btn_idx<BTNSH_CNT;btn_idx++)
+    for (uint8_t btn_idx=0; btn_idx<1;btn_idx++)
     {
-        bool current;
-        bool tmp;
-		current = LL_GPIO_IsInputPinSet(btnsh[btn_idx].GPIOx, btnsh[btn_idx].PinMask); /* read Button */
-		tmp = btnsh[btn_idx].depressed; /* save the debounced depressed buttons */
+        uint8_t current = LL_GPIO_IsInputPinSet(btnsh[btn_idx].GPIOx, btnsh[btn_idx].PinMask)?1:0; /* read Button */;
+        uint8_t tmp = btnsh[btn_idx].depressed; /* save the debounced depressed buttons */
 		btnsh[btn_idx].depressed |= (btnsh[btn_idx].previous & current); /* set depressed */
 		btnsh[btn_idx].depressed &= (btnsh[btn_idx].previous | current); /* clear released */
 		btnsh[btn_idx].previous   = current; /* update the history */
 		tmp ^= btnsh[btn_idx].depressed;     /* changed debounced depressed */
-		if (tmp  != false) {  /* debounced B1 state changed? */
-			if (btnsh[btn_idx].depressed ) { /* is B1 depressed? */
-				QF_PUBLISH(&btn_evt[btn_idx][0], &l_SysTick);
+		if (tmp  == 0x01) {  /* debounced B1 state changed? */
+			if (btnsh[btn_idx].depressed == 0x01 ) { /* is Button depressed? */
+				//QF_PUBLISH(&btn_evt[btn_idx][0], &l_SysTick);
 			}
 			else { /* the button is released */
-				QF_PUBLISH(&btn_evt[btn_idx][1], &l_SysTick);
+				//QF_PUBLISH(&btn_evt[btn_idx][1], &l_SysTick);
 			}
 		}
     }
-#endif
     QK_ISR_EXIT();  /* inform QK about exiting an ISR */
 }
 
@@ -421,7 +416,7 @@ void QS_onCommand(uint8_t cmdId,
         Q_ERROR();
     }
     else if (cmdId == 11U) {
-        assert_failed("QS_onCommand", 123);
+        assert_failed((uint8_t*)"QS_onCommand", 123);
     }
 }
 
