@@ -1,0 +1,3 @@
+[submodule "qpc"]
+	path = qpc
+	url = git@github.com:QuantumLeaps/qpc.git
