@@ -41,6 +41,14 @@ typedef enum {
 	LEDSH_GREEN=1
 } Ledsh_t;
 
+typedef enum {
+	BTNSH_UP=0,
+	BTNSH_DOWN,
+	BTNSH_LEFT,
+	BTNSH_RIGHT,
+	BTNSH_CNT,
+} btnsh_t;
+
 
 void BSP_init(void);
 //void BSP_displayPaused(uint8_t paused);

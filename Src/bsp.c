@@ -81,22 +81,6 @@ typedef struct btn_deb_t_
 	uint8_t previous;
 } btn_deb_t;
 
-typedef enum {
-	BTNSH_UP = 0,
-	BTNSH_DOWN,
-	BTNSH_LEFT,
-	BTNSH_RIGHT,
-	BTNSH_CNT,
-} btnsh_e;
-
-static const QEvt btn_evt[][2]=
-{
-	{{Btnsh_up_on   ,  0, 0}, {Btnsh_up_off  ,  0, 0}},
-	{{Btnsh_down_on ,  0, 0}, {Btnsh_down_off,  0, 0}},
-	{{Btnsh_left_on ,  0, 0}, {Btnsh_left_off,  0, 0}},
-	{{Btnsh_right_on,  0, 0}, {Btnsh_right_off, 0, 0}},
-};
-
 static btn_deb_t btnsh[BTNSH_CNT]=
 {
 	{BTNSH_Up_GPIO_Port, BTNSH_Up_Pin, 0, 0      },
@@ -113,10 +97,8 @@ static btn_deb_t btnsh[BTNSH_CNT]=
     static uint8_t const l_SysTick;
 
     enum AppRecords { /* application-specific trace records */
-    	Btnsh_up = QS_USER,
-		Btnsh_down,
-		Btnsh_left,
-		Btnsh_right,
+    	Btnsh_on = QS_USER,
+		Btnsh_off,
 		COMMAND_STAT,
     };
 
@@ -134,7 +116,7 @@ void SysTick_Handler(void) {
     }
 #endif
 
-    QF_TICK_X(0U, &l_SysTick);
+    //QF_TICK_X(0U, &l_SysTick);
 
     /* Perform the debouncing of buttons. The algorithm for debouncing
     * adapted from the book "Embedded Systems Dictionary" by Jack Ganssle
@@ -151,10 +133,14 @@ void SysTick_Handler(void) {
 		tmp ^= btnsh[btn_idx].depressed;     /* changed debounced depressed */
 		if (tmp  == 0x01) {  /* debounced B1 state changed? */
 			if (btnsh[btn_idx].depressed == 0x01 ) { /* is Button depressed? */
-				//QF_PUBLISH(&btn_evt[btn_idx][0], &l_SysTick);
+				key_event_t *evt = Q_NEW(key_event_t, BTNSH_ON);
+				evt->btn = btn_idx;
+				//QF_PUBLISH((QEvt const * const) evt, (void*)0);
 			}
 			else { /* the button is released */
-				//QF_PUBLISH(&btn_evt[btn_idx][1], &l_SysTick);
+				key_event_t *evt = Q_NEW(key_event_t, BTNSH_OFF);
+				evt->btn = btn_idx;
+				//QF_PUBLISH((QEvt const * const) evt, (void*)0);
 			}
 		}
     }
@@ -198,7 +184,7 @@ void BSP_init(void) {
     if (QS_INIT((void *)0) == 0U) { /* initialize the QS software tracing */
         Q_ERROR();
     }
-    QS_OBJ_DICTIONARY(&l_SysTick);
+    //QS_OBJ_DICTIONARY(&l_SysTick);
     //QS_USR_DICTIONARY(PHILO_STAT);
     //QS_USR_DICTIONARY(COMMAND_STAT);
 }
@@ -343,10 +329,10 @@ void Q_onAssert(char const *module, int loc) {
 
 /* QS callbacks ============================================================*/
 #ifdef Q_SPY
+static uint8_t qsBuf[2*1024]; /* buffer for QS-TX channel */
+static uint8_t qsRxBuf[100];  /* buffer for QS-RX channel */
 /*..........................................................................*/
 uint8_t QS_onStartup(void const *arg) {
-    static uint8_t qsBuf[2*1024]; /* buffer for QS-TX channel */
-    static uint8_t qsRxBuf[100];  /* buffer for QS-RX channel */
 
     (void)arg; /* avoid the "unused parameter" compiler warning */
     QS_initBuf(qsBuf, sizeof(qsBuf));

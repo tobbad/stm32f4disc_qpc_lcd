@@ -13,19 +13,21 @@
  */
 enum APPSignals
 {
-	Btnsh_up_on  =  Q_USER_SIG,
-	Btnsh_up_off,
-	Btnsh_down_on,
-	Btnsh_down_off,
-	Btnsh_left_on,
-	Btnsh_left_off,
-	Btnsh_right_on,
-	Btnsh_right_off,
+	BTNSH_ON  =  Q_USER_SIG,
+	BTNSH_OFF,
     MAX_PUB_SIG,    /* the last published signal */
 
     TIMEOUT_SIG,    /*  */
     MAX_SIG         /* the last signal */
 };
 
+typedef struct key_event_t_
+{
+	/* protected: */
+	QActive super;
+	/* private: */
+	btnsh_t btn;
+} key_event_t;
+#endif
 
-#endif /* STATE_MACHINE_APPSM_H_ */
+/* STATE_MACHINE_APPSM_H_ */

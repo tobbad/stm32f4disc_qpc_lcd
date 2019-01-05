@@ -57,6 +57,7 @@
 #include "qpc.h"
 #include "bsp.h"
 #include "AppAO.h"
+#include "AppSM.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -83,6 +84,7 @@ SPI_HandleTypeDef hspi1;
 
 /* USER CODE BEGIN PV */
 static QEvt const *appQueueSto[APP_QUEUE_SIZE];
+static QSubscrList subscrSto[MAX_PUB_SIG];
 
 static QTicker l_ticker0;
 QActive *the_Ticker0 = &l_ticker0;
@@ -127,8 +129,8 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-  AppAO_ctor();
   QTicker_ctor(&l_ticker0, 0U); /* ticker AO for tick rate 0 */
+  AppAO_ctor();
   QF_init();
 
   /* initialize the Board Support Package
@@ -148,6 +150,10 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
   BSP_init();
+
+  /* init publish-subscribe... */
+  QF_psInit(subscrSto, Q_DIM(subscrSto));
+
   QACTIVE_START(the_Ticker0, 1U, 0, 0, 0, 0, 0);
   QACTIVE_START(AO_App,                  /* AO to start */
                 (uint_fast8_t)(2),       /* QP priority of the AO */
@@ -156,6 +162,14 @@ int main(void)
                 (void *)0,                 /* stack storage (not used) */
                 0U,                        /* size of the stack [bytes] */
                 (QEvt *)0);                /* initialization event */
+
+  /* object dictionaries for AOs... */
+  QS_OBJ_DICTIONARY(AO_App);
+
+  /* signal dictionaries for globally published events... */
+  QS_SIG_DICTIONARY(BTNSH_ON,      (void *)0);
+  QS_SIG_DICTIONARY(BTNSH_OFF,     (void *)0);
+
   QF_run(); /* run the QF application */
   /* USER CODE END 2 */
 
