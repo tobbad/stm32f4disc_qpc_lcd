@@ -116,7 +116,7 @@ void SysTick_Handler(void) {
     }
 #endif
 
-    //QF_TICK_X(0U, &l_SysTick);
+    QF_TICK_X(0U, &l_SysTick);
 
     /* Perform the debouncing of buttons. The algorithm for debouncing
     * adapted from the book "Embedded Systems Dictionary" by Jack Ganssle
@@ -134,13 +134,20 @@ void SysTick_Handler(void) {
 		if (tmp  == 0x01) {  /* debounced B1 state changed? */
 			if (btnsh[btn_idx].depressed == 0x01 ) { /* is Button depressed? */
 				key_event_t *evt = Q_NEW(key_event_t, BTNSH_ON);
-				evt->btn = btn_idx;
-				//QF_PUBLISH((QEvt const * const) evt, (void*)0);
+				if (evt != NULL)
+				{
+					evt->btn = btn_idx;
+					//QF_PUBLISH((QEvt const * const) evt, (void*)0);
+				}
 			}
-			else { /* the button is released */
+			else
+			{ /* the button is released */
 				key_event_t *evt = Q_NEW(key_event_t, BTNSH_OFF);
-				evt->btn = btn_idx;
-				//QF_PUBLISH((QEvt const * const) evt, (void*)0);
+				if (evt != NULL)
+				{
+					evt->btn = btn_idx;
+					//QF_PUBLISH((QEvt const * const) evt, (void*)0);
+				}
 			}
 		}
     }
@@ -184,7 +191,7 @@ void BSP_init(void) {
     if (QS_INIT((void *)0) == 0U) { /* initialize the QS software tracing */
         Q_ERROR();
     }
-    //QS_OBJ_DICTIONARY(&l_SysTick);
+    QS_OBJ_DICTIONARY(&l_SysTick);
     //QS_USR_DICTIONARY(PHILO_STAT);
     //QS_USR_DICTIONARY(COMMAND_STAT);
 }
