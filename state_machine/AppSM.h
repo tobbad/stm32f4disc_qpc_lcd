@@ -28,6 +28,4 @@ typedef struct key_event_t_
 	/* private: */
 	btnsh_t btn;
 } key_event_t;
-#endif
-
-/* STATE_MACHINE_APPSM_H_ */
+#endif /* STATE_MACHINE_APPSM_H_ */

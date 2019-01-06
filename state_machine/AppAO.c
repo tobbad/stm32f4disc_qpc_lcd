@@ -16,6 +16,7 @@ typedef struct AppAO_t_ {
 } AppAO_t;
 
 static QState AppAO_initial(AppAO_t * const me, QEvt const * const e);
+static QState AppAO_base(AppAO_t * const me, QEvt const * const e);
 static QState AppAO_on(AppAO_t * const me, QEvt const * const e);
 static QState AppAO_off(AppAO_t * const me, QEvt const * const e);
 
@@ -34,9 +35,41 @@ void AppAO_ctor(void)
 static QState AppAO_initial(AppAO_t * const me, QEvt const * const e)
 {
 	(void)e;
+    QActive_subscribe(&me->super, BTNSH_ON);
+    QActive_subscribe(&me->super, BTNSH_OFF);
     QTimeEvt_armX(&me->timeEvt, BSP_TICKS_PER_SEC/2, BSP_TICKS_PER_SEC/2);
-	return Q_TRAN(&AppAO_off);
+
+    QS_SIG_DICTIONARY(TIMEOUT_SIG,         me);
+    QS_FUN_DICTIONARY(&AppAO_base);
+    QS_FUN_DICTIONARY(&AppAO_on);
+    QS_FUN_DICTIONARY(&AppAO_off);
+
+	return Q_TRAN(&AppAO_base);
 }
+
+static QState AppAO_base(AppAO_t * const me, QEvt const * const e)
+{
+	switch (e->sig)
+	{
+		case Q_INIT_SIG:
+		{
+			BSP_ledOff(LEDSH_RED);
+			return Q_TRAN(&AppAO_off);
+		}
+		case BTNSH_ON:
+		{
+			BSP_ledOn(LEDSH_RED);
+			return Q_HANDLED();
+		}
+		case BTNSH_OFF:
+		{
+			BSP_ledOff(LEDSH_RED);
+			return Q_HANDLED();
+		}
+	}
+	return Q_SUPER(&QHsm_top);
+}
+
 
 static QState AppAO_on(AppAO_t * const me, QEvt const * const e)
 {
@@ -52,7 +85,7 @@ static QState AppAO_on(AppAO_t * const me, QEvt const * const e)
 			return Q_TRAN(&AppAO_off);
 		}
 	}
-	return Q_SUPER(&QHsm_top);
+	return Q_SUPER(&AppAO_base);
 }
 
 static QState AppAO_off(AppAO_t * const me, QEvt const * const e)
@@ -69,5 +102,5 @@ static QState AppAO_off(AppAO_t * const me, QEvt const * const e)
 			return Q_TRAN(&AppAO_on);
 		}
 	}
-	return Q_SUPER(&QHsm_top);
+	return Q_SUPER(&AppAO_base);
 }

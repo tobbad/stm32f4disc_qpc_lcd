@@ -85,6 +85,7 @@ SPI_HandleTypeDef hspi1;
 /* USER CODE BEGIN PV */
 static QEvt const *appQueueSto[APP_QUEUE_SIZE];
 static QSubscrList subscrSto[MAX_PUB_SIG];
+static QF_MPOOL_EL(key_event_t) smlPoolSto[10];
 
 static QTicker l_ticker0;
 QActive *the_Ticker0 = &l_ticker0;
@@ -133,6 +134,12 @@ int main(void)
   AppAO_ctor();
   QF_init();
 
+  /* init publish-subscribe... */
+  QF_psInit(subscrSto, Q_DIM(subscrSto));
+
+  /* initialize event pools... */
+  QF_poolInit(smlPoolSto, sizeof(smlPoolSto), sizeof(smlPoolSto[0]));
+
   /* initialize the Board Support Package
   * NOTE: BSP_init() is called *after* initializing publish-subscribe and
   * event pools, to make the system ready to accept SysTick interrupts.
@@ -151,8 +158,12 @@ int main(void)
   /* USER CODE BEGIN 2 */
   BSP_init();
 
-  /* init publish-subscribe... */
-  QF_psInit(subscrSto, Q_DIM(subscrSto));
+  /* object dictionaries for AOs... */
+  QS_OBJ_DICTIONARY(AO_App);
+
+  /* signal dictionaries for globally published events... */
+  QS_SIG_DICTIONARY(BTNSH_ON,      (void *)0);
+  QS_SIG_DICTIONARY(BTNSH_OFF,     (void *)0);
 
   QACTIVE_START(the_Ticker0, 1U, 0, 0, 0, 0, 0);
   QACTIVE_START(AO_App,                  /* AO to start */
@@ -163,12 +174,6 @@ int main(void)
                 0U,                        /* size of the stack [bytes] */
                 (QEvt *)0);                /* initialization event */
 
-  /* object dictionaries for AOs... */
-  QS_OBJ_DICTIONARY(AO_App);
-
-  /* signal dictionaries for globally published events... */
-  QS_SIG_DICTIONARY(BTNSH_ON,      (void *)0);
-  QS_SIG_DICTIONARY(BTNSH_OFF,     (void *)0);
 
   QF_run(); /* run the QF application */
   /* USER CODE END 2 */

@@ -122,9 +122,14 @@ void SysTick_Handler(void) {
     * adapted from the book "Embedded Systems Dictionary" by Jack Ganssle
     * and Michael Barr, page 71.
     */
-    //for (uint8_t btn_idx=0; btn_idx<BTNSH_CNT;btn_idx++)
-    for (uint8_t btn_idx=0; btn_idx<1;btn_idx++)
+
+    for (uint8_t btn_idx=0; btn_idx<BTNSH_CNT;btn_idx++)
     {
+    	/*
+    	 * Button has pull up:
+    	 * Not pressed => H Level (1)
+    	 * Pressed	   => L Level (0)
+    	 */
         uint8_t current = LL_GPIO_IsInputPinSet(btnsh[btn_idx].GPIOx, btnsh[btn_idx].PinMask)?1:0; /* read Button */;
         uint8_t tmp = btnsh[btn_idx].depressed; /* save the debounced depressed buttons */
 		btnsh[btn_idx].depressed |= (btnsh[btn_idx].previous & current); /* set depressed */
@@ -132,21 +137,21 @@ void SysTick_Handler(void) {
 		btnsh[btn_idx].previous   = current; /* update the history */
 		tmp ^= btnsh[btn_idx].depressed;     /* changed debounced depressed */
 		if (tmp  == 0x01) {  /* debounced B1 state changed? */
-			if (btnsh[btn_idx].depressed == 0x01 ) { /* is Button depressed? */
-				key_event_t *evt = Q_NEW(key_event_t, BTNSH_ON);
-				if (evt != NULL)
-				{
-					evt->btn = btn_idx;
-					//QF_PUBLISH((QEvt const * const) evt, (void*)0);
-				}
-			}
-			else
-			{ /* the button is released */
+			if (btnsh[btn_idx].depressed == 0x01 ) { /* is Button released? */
 				key_event_t *evt = Q_NEW(key_event_t, BTNSH_OFF);
 				if (evt != NULL)
 				{
 					evt->btn = btn_idx;
-					//QF_PUBLISH((QEvt const * const) evt, (void*)0);
+					QF_PUBLISH((QEvt const * const) evt, (void*)0);
+				}
+			}
+			else
+			{ /* the button is pressed */
+				key_event_t *evt = Q_NEW(key_event_t, BTNSH_ON);
+				if (evt != NULL)
+				{
+					evt->btn = btn_idx;
+					QF_PUBLISH((QEvt const * const) evt, (void*)0);
 				}
 			}
 		}
@@ -282,12 +287,12 @@ void QF_onCleanup(void) {
 /*..........................................................................*/
 void QK_onIdle(void) {
     QF_INT_DISABLE();
-    BSP_ledOn(LEDSH_RED); /* turn LED on  */
+    //BSP_ledOn(LEDSH_RED); /* turn LED on  */
     __NOP(); /* wait a little to actually see the LED glow */
     __NOP();
     __NOP();
     __NOP();
-    BSP_ledOff(LEDSH_RED); /* turn LED Off  */
+    // BSP_ledOff(LEDSH_RED); /* turn LED Off  */
     QF_INT_ENABLE();
 
 #ifdef Q_SPY
