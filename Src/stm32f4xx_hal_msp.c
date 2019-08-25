@@ -117,7 +117,6 @@ void HAL_MspInit(void)
 */
 void HAL_I2C_MspInit(I2C_HandleTypeDef* hi2c)
 {
-
   GPIO_InitTypeDef GPIO_InitStruct = {0};
   if(hi2c->Instance==I2C1)
   {
@@ -152,10 +151,8 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* hi2c)
 * @param hi2c: I2C handle pointer
 * @retval None
 */
-
 void HAL_I2C_MspDeInit(I2C_HandleTypeDef* hi2c)
 {
-
   if(hi2c->Instance==I2C1)
   {
   /* USER CODE BEGIN I2C1_MspDeInit 0 */
@@ -185,7 +182,6 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* hi2c)
 */
 void HAL_I2S_MspInit(I2S_HandleTypeDef* hi2s)
 {
-
   GPIO_InitTypeDef GPIO_InitStruct = {0};
   if(hi2s->Instance==SPI3)
   {
@@ -230,10 +226,8 @@ void HAL_I2S_MspInit(I2S_HandleTypeDef* hi2s)
 * @param hi2s: I2S handle pointer
 * @retval None
 */
-
 void HAL_I2S_MspDeInit(I2S_HandleTypeDef* hi2s)
 {
-
   if(hi2s->Instance==SPI3)
   {
   /* USER CODE BEGIN SPI3_MspDeInit 0 */
@@ -267,7 +261,6 @@ void HAL_I2S_MspDeInit(I2S_HandleTypeDef* hi2s)
 */
 void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
 {
-
   GPIO_InitTypeDef GPIO_InitStruct = {0};
   if(hspi->Instance==SPI1)
   {
@@ -303,10 +296,8 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
 * @param hspi: SPI handle pointer
 * @retval None
 */
-
 void HAL_SPI_MspDeInit(SPI_HandleTypeDef* hspi)
 {
-
   if(hspi->Instance==SPI1)
   {
   /* USER CODE BEGIN SPI1_MspDeInit 0 */

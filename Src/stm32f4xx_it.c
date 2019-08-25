@@ -70,6 +70,7 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
+
 /* USER CODE BEGIN EV */
 __attribute__ ((naked, optimize("-fno-stack-protector")))
 /* USER CODE END EV */

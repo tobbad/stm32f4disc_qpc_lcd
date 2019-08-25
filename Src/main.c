@@ -114,8 +114,18 @@ static void MX_I2C1_Init(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
+	QTicker_ctor(&l_ticker0, 0U); /* ticker AO for tick rate 0 */
+	AppAO_ctor();
+	QF_init();
+
+	/* init publish-subscribe... */
+	QF_psInit(subscrSto, Q_DIM(subscrSto));
+
+	/* initialize event pools... */
+	QF_poolInit(smlPoolSto, sizeof(smlPoolSto), sizeof(smlPoolSto[0]));
 
   /* USER CODE END 1 */
+  
 
   /* MCU Configuration--------------------------------------------------------*/
 
@@ -130,15 +140,6 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-  QTicker_ctor(&l_ticker0, 0U); /* ticker AO for tick rate 0 */
-  AppAO_ctor();
-  QF_init();
-
-  /* init publish-subscribe... */
-  QF_psInit(subscrSto, Q_DIM(subscrSto));
-
-  /* initialize event pools... */
-  QF_poolInit(smlPoolSto, sizeof(smlPoolSto), sizeof(smlPoolSto[0]));
 
   /* initialize the Board Support Package
   * NOTE: BSP_init() is called *after* initializing publish-subscribe and
@@ -175,7 +176,8 @@ int main(void)
                 (QEvt *)0);                /* initialization event */
 
 
-  QF_run(); /* run the QF application */
+  return QF_run(); /* run the QF application */
+#if 0
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -186,6 +188,7 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
   }
+#endif
   /* USER CODE END 3 */
 }
 
@@ -199,11 +202,11 @@ void SystemClock_Config(void)
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
   RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
 
-  /**Configure the main internal regulator output voltage 
+  /** Configure the main internal regulator output voltage 
   */
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
-  /**Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the CPU, AHB and APB busses clocks 
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
@@ -217,7 +220,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  /**Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the CPU, AHB and APB busses clocks 
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
