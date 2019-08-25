@@ -37,11 +37,7 @@
 #include "bsp.h"
 
 #include "../state_machine/AppSM.h"
-#include "stm32f4xx.h"  /* CMSIS-compliant header file for the MCU used */
-#include "stm32f4xx_exti.h"
-#include "stm32f4xx_gpio.h"
-#include "stm32f4xx_rcc.h"
-#include "stm32f4xx_usart.h"
+#include "stm32f4xx_hal.h"  /* CMSIS-compliant header file for the MCU used */
 /* add other drivers if necessary... */
 
 Q_DEFINE_THIS_FILE
