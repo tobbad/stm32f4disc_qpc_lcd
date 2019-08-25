@@ -35,9 +35,12 @@
 #include "main.h"
 #include "qpc.h"
 #include "bsp.h"
+#include "lvgl.h"
 
 #include "../state_machine/AppSM.h"
 #include "stm32f4xx_hal.h"  /* CMSIS-compliant header file for the MCU used */
+
+#include "../lib/display/display.h"
 /* add other drivers if necessary... */
 
 Q_DEFINE_THIS_FILE
@@ -45,7 +48,9 @@ Q_DEFINE_THIS_FILE
 /* ISRs defined in this BSP ------------------------------------------------*/
 void SysTick_Handler(void);
 void USART2_IRQHandler(void);
-
+/* Function with file scope */
+static void disp_flush(struct _disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * color_p);
+static disp_func_t *disp_func = NULL;
 /* Local-scope defines -----------------------------------------------------*/
 
 /* Buttons debounce structure */
@@ -63,6 +68,39 @@ static btn_deb_t btnsh[BTNSH_CNT]=
 	{BTNSH_Down_GPIO_Port, BTNSH_Down_Pin, 0, 0  },
 	{BTNSH_Left_GPIO_Port, BTNSH_Left_Pin, 0, 0  },
 	{BTNSH_Right_GPIO_Port, BTNSH_Right_Pin, 0, 0},
+};
+/*
+ * Display buffer
+ */
+static lv_disp_buf_t disp_buf;
+static lv_color_t buf[LV_HOR_RES_MAX * 10];                     /*Declare a buffer for 10 lines*/
+/* Port structure to keep pins for the display control */
+static const disp_ctrl_t disp_ctrl = {
+	.data =
+	{
+		{.gpio=GPIOD, .pin=0},
+		{.gpio=GPIOD, .pin=1},
+		{.gpio=GPIOD, .pin=2},
+		{.gpio=GPIOD, .pin=3},
+		{.gpio=GPIOE, .pin=4},
+		{.gpio=GPIOE, .pin=5},
+		{.gpio=GPIOE, .pin=6},
+		{.gpio=GPIOE, .pin=7},
+		{.gpio=GPIOE, .pin=8},
+		{.gpio=GPIOE, .pin=9},
+		{.gpio=GPIOE, .pin=10},
+		{.gpio=GPIOE, .pin=11},
+		{.gpio=GPIOE, .pin=12},
+		{.gpio=GPIOE, .pin=13},
+		{.gpio=GPIOE, .pin=14},
+		{.gpio=GPIOE, .pin=15},
+	},
+	.wr = {.gpio=GPIOC, .pin=2},
+	.rd = {.gpio=GPIOC, .pin=1},
+	.rs = {.gpio=GPIOC, .pin=0},
+	.cs = {.gpio=GPIOD, .pin=10},
+	.reset = {.gpio=GPIOC, .pin=5},
+	.led = {.gpio=GPIOA, .pin=15},
 };
 
 #ifdef Q_SPY
@@ -132,7 +170,8 @@ void SysTick_Handler(void) {
 			}
 		}
     }
-
+    lv_tick_inc(1);
+    lv_task_handler();
     QK_ISR_EXIT();  /* inform QK about exiting an ISR */
 }
 
@@ -195,7 +234,39 @@ void BSP_init(void) {
     QS_OBJ_DICTIONARY(&l_SysTick);
     //QS_USR_DICTIONARY(PHILO_STAT);
     //QS_USR_DICTIONARY(COMMAND_STAT);
+    /*
+     * Set up display
+     */
+    disp_func = disp_ctor(SSD1289, &disp_ctrl);
+    disp_func->on();
+    lv_init();
+    lv_disp_buf_init(&disp_buf, buf, NULL, LV_HOR_RES_MAX * 10);    /*Initialize the display buffer*/
+    lv_disp_drv_t disp_drv;               /*Descriptor of a display driver*/
+    lv_disp_drv_init(&disp_drv);          /*Basic initialization*/
+    disp_drv.flush_cb = disp_flush;    /*Set your driver function*/
+    disp_drv.buffer = &disp_buf;          /*Assign the buffer to the display*/
+    lv_disp_drv_register(&disp_drv);      /*Finally register the driver*/
+
 }
+
+/*..........................................................................*/
+/*
+ * Display handling functions
+ */
+/*..........................................................................*/
+static void disp_flush(struct _disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * color_p)
+{
+    int32_t x, y;
+    for(y = area->y1; y <= area->y2; y++) {
+        for(x = area->x1; x <= area->x2; x++) {
+            //disp_set_pixel(x, y, *color_p);  /* Put a pixel to the display.*/
+            color_p++;
+        }
+    }
+
+    lv_disp_flush_ready(disp_drv);         /* Indicate you are ready with the flushing*/
+}
+
 /*..........................................................................*/
 void BSP_ledOn(Ledsh_t ledNr) {
 	if (ledNr==LEDSH_RED)

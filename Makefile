@@ -123,6 +123,98 @@ ifeq ($(USE_QSPY), 1)
 C_SOURCES += $(QS_SRCS)
 endif
 
+# Little VGL Source
+# https://github.com/littlevgl/lvgl
+C_SOURCES += \
+lib/lvgl/src/lv_core/lv_disp.c \
+lib/lvgl/src/lv_core/lv_group.c \
+lib/lvgl/src/lv_core/lv_indev.c \
+lib/lvgl/src/lv_core/lv_obj.c \
+lib/lvgl/src/lv_core/lv_refr.c \
+lib/lvgl/src/lv_core/lv_style.c \
+lib/lvgl/src/lv_draw/lv_draw.c \
+lib/lvgl/src/lv_draw/lv_draw_arc.c \
+lib/lvgl/src/lv_draw/lv_draw_basic.c \
+lib/lvgl/src/lv_draw/lv_draw_img.c \
+lib/lvgl/src/lv_draw/lv_draw_label.c \
+lib/lvgl/src/lv_draw/lv_draw_line.c \
+lib/lvgl/src/lv_draw/lv_draw_rect.c \
+lib/lvgl/src/lv_draw/lv_draw_triangle.c \
+lib/lvgl/src/lv_draw/lv_img_cache.c \
+lib/lvgl/src/lv_draw/lv_img_decoder.c \
+lib/lvgl/src/lv_font/lv_font.c \
+lib/lvgl/src/lv_font/lv_font_fmt_txt.c \
+lib/lvgl/src/lv_font/lv_font_roboto_12.c \
+lib/lvgl/src/lv_font/lv_font_roboto_16.c \
+lib/lvgl/src/lv_font/lv_font_roboto_22.c \
+lib/lvgl/src/lv_font/lv_font_roboto_28.c \
+lib/lvgl/src/lv_font/lv_font_unscii_8.c \
+lib/lvgl/src/lv_hal/lv_hal_disp.c \
+lib/lvgl/src/lv_hal/lv_hal_indev.c \
+lib/lvgl/src/lv_hal/lv_hal_tick.c \
+lib/lvgl/src/lv_misc/lv_anim.c \
+lib/lvgl/src/lv_misc/lv_area.c \
+lib/lvgl/src/lv_misc/lv_async.c \
+lib/lvgl/src/lv_misc/lv_circ.c \
+lib/lvgl/src/lv_misc/lv_color.c \
+lib/lvgl/src/lv_misc/lv_fs.c \
+lib/lvgl/src/lv_misc/lv_gc.c \
+lib/lvgl/src/lv_misc/lv_ll.c \
+lib/lvgl/src/lv_misc/lv_log.c \
+lib/lvgl/src/lv_misc/lv_math.c \
+lib/lvgl/src/lv_misc/lv_mem.c \
+lib/lvgl/src/lv_misc/lv_task.c \
+lib/lvgl/src/lv_misc/lv_templ.c \
+lib/lvgl/src/lv_misc/lv_txt.c \
+lib/lvgl/src/lv_misc/lv_utils.c \
+lib/lvgl/src/lv_objx/lv_arc.c \
+lib/lvgl/src/lv_objx/lv_bar.c \
+lib/lvgl/src/lv_objx/lv_btn.c \
+lib/lvgl/src/lv_objx/lv_btnm.c \
+lib/lvgl/src/lv_objx/lv_calendar.c \
+lib/lvgl/src/lv_objx/lv_canvas.c \
+lib/lvgl/src/lv_objx/lv_cb.c \
+lib/lvgl/src/lv_objx/lv_chart.c \
+lib/lvgl/src/lv_objx/lv_cont.c \
+lib/lvgl/src/lv_objx/lv_ddlist.c \
+lib/lvgl/src/lv_objx/lv_gauge.c \
+lib/lvgl/src/lv_objx/lv_img.c \
+lib/lvgl/src/lv_objx/lv_imgbtn.c \
+lib/lvgl/src/lv_objx/lv_kb.c \
+lib/lvgl/src/lv_objx/lv_label.c \
+lib/lvgl/src/lv_objx/lv_led.c \
+lib/lvgl/src/lv_objx/lv_line.c \
+lib/lvgl/src/lv_objx/lv_list.c \
+lib/lvgl/src/lv_objx/lv_lmeter.c \
+lib/lvgl/src/lv_objx/lv_mbox.c \
+lib/lvgl/src/lv_objx/lv_objx_templ.c \
+lib/lvgl/src/lv_objx/lv_page.c \
+lib/lvgl/src/lv_objx/lv_preload.c \
+lib/lvgl/src/lv_objx/lv_roller.c \
+lib/lvgl/src/lv_objx/lv_slider.c \
+lib/lvgl/src/lv_objx/lv_spinbox.c \
+lib/lvgl/src/lv_objx/lv_sw.c \
+lib/lvgl/src/lv_objx/lv_ta.c \
+lib/lvgl/src/lv_objx/lv_table.c \
+lib/lvgl/src/lv_objx/lv_tabview.c \
+lib/lvgl/src/lv_objx/lv_tileview.c \
+lib/lvgl/src/lv_objx/lv_win.c \
+lib/lvgl/src/lv_themes/lv_theme.c \
+lib/lvgl/src/lv_themes/lv_theme_alien.c \
+lib/lvgl/src/lv_themes/lv_theme_default.c \
+lib/lvgl/src/lv_themes/lv_theme_material.c \
+lib/lvgl/src/lv_themes/lv_theme_mono.c \
+lib/lvgl/src/lv_themes/lv_theme_nemo.c \
+lib/lvgl/src/lv_themes/lv_theme_night.c \
+lib/lvgl/src/lv_themes/lv_theme_templ.c \
+lib/lvgl/src/lv_themes/lv_theme_zen.c
+
+#
+# Low level display driver
+#
+C_SOURCES += \
+lib/display/display.c \
+lib/display/display_ssd1289.c
 
 #######################################
 # binaries
@@ -192,6 +284,21 @@ C_INCLUDES += \
 
 # Statemachine
 C_INCLUDES += -Istate_machine
+
+# Little LVGL
+#
+C_INCLUDES += \
+-Ilib \
+-Ilib/lvgl \
+-Ilib/lvgl/src \
+-Ilib/lvgl/src/lv_core \
+-Ilib/lvgl/src/lv_draw \
+-Ilib/lvgl/src/lv_font \
+-Ilib/lvgl/src/lv_hal \
+-Ilib/lvgl/src/lv_misc \
+-Ilib/lvgl/src/lv_objx \
+-Ilib/lvgl/src/lv_themes \
+-Ilib/display
 
 # compile gcc flags
 ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
