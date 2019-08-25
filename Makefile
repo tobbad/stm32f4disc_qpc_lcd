@@ -20,7 +20,7 @@ TARGET = stm32f4disc_qpc_lcd
 ######################################
 QPC = ./Middlewares/qpc
 # QP port used in this project
-QP_PORT_DIR := ./ports/
+QP_PORT_DIR := $(QPC)/ports/arm-cm/qk/gnu
 VPATH = \
 	$(QPC)/src/qf \
 	$(QPC)/src/qk \
@@ -186,9 +186,9 @@ C_INCLUDES =  \
 #######################################
 # Quantum leaps C source files
 C_INCLUDES += \
+	-I$(QP_PORT_DIR) \
 	-I$(QPC)/include \
-	-I$(QPC)/src \
-	-I$(QP_PORT_DIR) 
+	-I$(QPC)/src
 
 # Statemachine
 C_INCLUDES += -Istate_machine

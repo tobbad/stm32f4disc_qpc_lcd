@@ -68,6 +68,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define APP_QUEUE_SIZE 5
+Q_DEFINE_THIS_FILE
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
